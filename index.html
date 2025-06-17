@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Solucionador de Desigualdades</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 40px;
+      background-color: #f0f8ff;
+    }
+    input, button {
+      padding: 8px;
+      font-size: 16px;
+      margin: 8px 0;
+    }
+    #resultado {
+      background-color: #fff;
+      border: 1px solid #ccc;
+      padding: 16px;
+      margin-top: 20px;
+      border-radius: 6px;
+    }
+  </style>
+</head>
+<body>
+  <h2>Resolución de Desigualdades Lineales y Cuadráticas</h2>
+  <p>Escribe una inecuación como: <code>2x^2 + 3x - 5 &lt;= 0</code></p>
+  <input type="text" id="inecuacion" placeholder="Ej: 2x^2+3x-5<=0">
+  <button onclick="resolver()">Resolver</button>
+
+  <div id="resultado"></div>
+
+  <script>
+    function resolver() {
+      const entrada = document.getElementById('inecuacion').value.replace(/\s+/g, '');
+      const resultado = document.getElementById('resultado');
+      resultado.innerHTML = '';
+
+      // Detectar el tipo de desigualdad (lineal o cuadrática)
+      const match = entrada.match(/^([-+]?\d*)x(\^2)?([-+]\d*)x?([-+]\d+)?([<>]=?|=)([-+]?\d+)$/);
+
+      if (!match) {
+        resultado.innerHTML = '<strong>Error:</strong> Formato no reconocido.';
+        return;
+      }
+
+      // Extraer partes
+      let a = match[1] || '1';
+      a = a === '+' || a === '-' ? a + '1' : a;
+      a = parseFloat(a);
+
+      const cuadratica = !!match[2];
+      let b = match[3] || (cuadratica ? '+0' : '1');
+      b = b === '+' || b === '-' ? b + '1' : b;
+      b = parseFloat(b);
+
+      let c = match[4] || '0';
+      c = parseFloat(c);
+
+      const signo = match[5];
+      const rhs = parseFloat(match[6]);
+
+      if (cuadratica) {
+        // Resolver cuadrática a*x^2 + b*x + c signo 0
+        c -= rhs; // pasar el segundo lado al primero
+        const discriminante = b ** 2 - 4 * a * c;
+
+        if (discriminante < 0) {
+          resultado.innerHTML = 'No hay soluciones reales.';
+          return;
+        }
+
+        const x1 = (-b + Math.sqrt(discriminante)) / (2 * a);
+        const x2 = (-b - Math.sqrt(discriminante)) / (2 * a);
+
+        const menor = Math.min(x1, x2);
+        const mayor = Math.max(x1, x2);
+
+        let intervalo = '';
+        if (signo === '<=') intervalo = `[${menor.toFixed(2)}, ${mayor.toFixed(2)}]`;
+        if (signo === '<') intervalo = `(${menor.toFixed(2)}, ${mayor.toFixed(2)})`;
+        if (signo === '>=') intervalo = `(-∞, ${menor.toFixed(2)}] ∪ [${mayor.toFixed(2)}, ∞)`;
+        if (signo === '>') intervalo = `(-∞, ${menor.toFixed(2)}) ∪ (${mayor.toFixed(2)}, ∞)`;
+
+        resultado.innerHTML = `<b>Solución:</b> x ∈ ${intervalo}`;
+      } else {
+        // Resolver lineal: a*x + b signo rhs
+        b -= rhs;
+        const x = -b / a;
+        let solucion = '';
+
+        if (signo === '<') solucion = `x < ${x.toFixed(2)}`;
+        if (signo === '<=') solucion = `x ≤ ${x.toFixed(2)}`;
+        if (signo === '>') solucion = `x > ${x.toFixed(2)}`;
+        if (signo === '>=') solucion = `x ≥ ${x.toFixed(2)}`;
+        if (signo === '=') solucion = `x = ${x.toFixed(2)}`;
+
+        resultado.innerHTML = `<b>Solución:</b> ${solucion}`;
+      }
+    }
+  </script>
+</body>
+</html>

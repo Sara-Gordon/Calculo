@@ -2,7 +2,8 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Solucionador de Desigualdades</title>
+  <title>Solución de Desigualdades con Gráfico</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -21,6 +22,10 @@
       margin-top: 20px;
       border-radius: 6px;
     }
+    canvas {
+      margin-top: 20px;
+      max-width: 100%;
+    }
   </style>
 </head>
 <body>
@@ -30,14 +35,19 @@
   <button onclick="resolver()">Resolver</button>
 
   <div id="resultado"></div>
+  <canvas id="grafico" width="600" height="400"></canvas>
 
   <script>
+    let chart;
+
     function resolver() {
       const entrada = document.getElementById('inecuacion').value.replace(/\s+/g, '');
       const resultado = document.getElementById('resultado');
       resultado.innerHTML = '';
 
-      // Detectar el tipo de desigualdad (lineal o cuadrática)
+      const ctx = document.getElementById('grafico').getContext('2d');
+      if (chart) chart.destroy(); // destruir gráfico anterior
+
       const match = entrada.match(/^([-+]?\d*)x(\^2)?([-+]\d*)x?([-+]\d+)?([<>]=?|=)([-+]?\d+)$/);
 
       if (!match) {
@@ -45,7 +55,6 @@
         return;
       }
 
-      // Extraer partes
       let a = match[1] || '1';
       a = a === '+' || a === '-' ? a + '1' : a;
       a = parseFloat(a);
@@ -61,31 +70,38 @@
       const signo = match[5];
       const rhs = parseFloat(match[6]);
 
+      const datos = [];
+      const etiquetas = [];
+
+      const xmin = -10, xmax = 10, paso = 0.1;
+
       if (cuadratica) {
-        // Resolver cuadrática a*x^2 + b*x + c signo 0
-        c -= rhs; // pasar el segundo lado al primero
+        c -= rhs;
         const discriminante = b ** 2 - 4 * a * c;
 
+        let solucion = '';
         if (discriminante < 0) {
-          resultado.innerHTML = 'No hay soluciones reales.';
-          return;
+          solucion = 'No hay soluciones reales.';
+        } else {
+          const x1 = (-b + Math.sqrt(discriminante)) / (2 * a);
+          const x2 = (-b - Math.sqrt(discriminante)) / (2 * a);
+          const menor = Math.min(x1, x2);
+          const mayor = Math.max(x1, x2);
+
+          if (signo === '<=') solucion = `x ∈ [${menor.toFixed(2)}, ${mayor.toFixed(2)}]`;
+          if (signo === '<') solucion = `x ∈ (${menor.toFixed(2)}, ${mayor.toFixed(2)})`;
+          if (signo === '>=') solucion = `x ∈ (-∞, ${menor.toFixed(2)}] ∪ [${mayor.toFixed(2)}, ∞)`;
+          if (signo === '>') solucion = `x ∈ (-∞, ${menor.toFixed(2)}) ∪ (${mayor.toFixed(2)}, ∞)`;
         }
 
-        const x1 = (-b + Math.sqrt(discriminante)) / (2 * a);
-        const x2 = (-b - Math.sqrt(discriminante)) / (2 * a);
+        resultado.innerHTML = `<b>Solución:</b> ${solucion}`;
 
-        const menor = Math.min(x1, x2);
-        const mayor = Math.max(x1, x2);
-
-        let intervalo = '';
-        if (signo === '<=') intervalo = `[${menor.toFixed(2)}, ${mayor.toFixed(2)}]`;
-        if (signo === '<') intervalo = `(${menor.toFixed(2)}, ${mayor.toFixed(2)})`;
-        if (signo === '>=') intervalo = `(-∞, ${menor.toFixed(2)}] ∪ [${mayor.toFixed(2)}, ∞)`;
-        if (signo === '>') intervalo = `(-∞, ${menor.toFixed(2)}) ∪ (${mayor.toFixed(2)}, ∞)`;
-
-        resultado.innerHTML = `<b>Solución:</b> x ∈ ${intervalo}`;
+        for (let x = xmin; x <= xmax; x += paso) {
+          const y = a * x * x + b * x + c;
+          etiquetas.push(x.toFixed(2));
+          datos.push(y);
+        }
       } else {
-        // Resolver lineal: a*x + b signo rhs
         b -= rhs;
         const x = -b / a;
         let solucion = '';
@@ -97,7 +113,38 @@
         if (signo === '=') solucion = `x = ${x.toFixed(2)}`;
 
         resultado.innerHTML = `<b>Solución:</b> ${solucion}`;
+
+        for (let x = xmin; x <= xmax; x += paso) {
+          const y = a * x + b;
+          etiquetas.push(x.toFixed(2));
+          datos.push(y);
+        }
       }
+
+      chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: etiquetas,
+          datasets: [{
+            label: 'Función',
+            data: datos,
+            borderColor: 'blue',
+            borderWidth: 2,
+            fill: false,
+            pointRadius: 0
+          }]
+        },
+        options: {
+          scales: {
+            x: { title: { display: true, text: 'x' } },
+            y: { title: { display: true, text: 'f(x)' }, beginAtZero: false }
+          },
+          plugins: {
+            legend: { display: false },
+            tooltip: { enabled: true }
+          }
+        }
+      });
     }
   </script>
 </body>

@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Dominio y Rango con Raíces y Denominadores</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjs/lib/browser/math.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 40px;
+      background-color: #f0f8ff;
+    }
+    input, button {
+      padding: 8px;
+      font-size: 16px;
+      margin: 8px 0;
+    }
+    #resultado {
+      background-color: #fff;
+      border: 1px solid #ccc;
+      padding: 16px;
+      margin-top: 20px;
+      border-radius: 6px;
+    }
+    canvas {
+      margin-top: 20px;
+      max-width: 100%;
+    }
+  </style>
+</head>
+<body>
+  <h2>Calculadora de Dominio y Rango</h2>
+  <p>Ingresa una función como: <code>1/(x-2)</code>, <code>sqrt(x-1)</code>, <code>sqrt(x)/x</code></p>
+  <input type="text" id="funcion" placeholder="Ej: sqrt(x)/x">
+  <button onclick="calcular()">Calcular</button>
+
+  <div id="resultado"></div>
+  <canvas id="grafico" width="600" height="400"></canvas>
+
+  <script>
+    let chart;
+
+    function calcular() {
+      const entrada = document.getElementById('funcion').value;
+      const resultado = document.getElementById('resultado');
+      resultado.innerHTML = '';
+
+      if (chart) chart.destroy();
+      const ctx = document.getElementById('grafico').getContext('2d');
+
+      let expr;
+      try {
+        expr = math.parse(entrada);
+        exprCompiled = expr.compile();
+      } catch (e) {
+        resultado.innerHTML = '<b>Error:</b> Función inválida.';
+        return;
+      }
+
+      const xMin = -20, xMax = 20, paso = 0.1;
+      const xValues = [];
+      const yValues = [];
+      const dominioValido = [];
+
+      // Evaluar dominio de forma simbólica
+      const restricciones = [];
+
+      expr.traverse(function (node) {
+        if (node.type === 'FunctionNode' && node.fn.name === 'sqrt') {
+          restricciones.push(`(${node.args[0].toString()}) >= 0`);
+        }
+        if (node.type === 'OperatorNode' && node.op === '/') {
+          restricciones.push(`(${node.args[1].toString()}) ≠ 0`);
+        }
+      });
+
+      // Evaluar numéricamente para gráfico y rango
+      for (let x = xMin; x <= xMax; x += paso) {
+        let y;
+        try {
+          y = exprCompiled.evaluate({ x });
+          if (typeof y === 'number' && isFinite(y)) {
+            xValues.push(x.toFixed(2));
+            yValues.push(y);
+            dominioValido.push(x);
+          }
+        } catch (e) {
+          // No agregar valores no válidos
+        }
+      }
+
+      if (xValues.length === 0) {
+        resultado.innerHTML = '<b>No se pudo graficar la función en este intervalo.</b>';
+        return;
+      }
+
+      const yMin = Math.min(...yValues);
+      const yMax = Math.max(...yValues);
+      const domMin = Math.min(...dominioValido);
+      const domMax = Math.max(...dominioValido);
+
+      let dominioTexto = restricciones.length
+        ? `<b>Restricciones del dominio:</b><ul>${restricciones.map(r => `<li>${r}</li>`).join('')}</ul>`
+        : '<b>Dominio:</b> Todos los reales';
+
+      resultado.innerHTML = `
+        ${dominioTexto}
+        <b>Dominio válido (aproximado):</b> [${domMin.toFixed(2)}, ${domMax.toFixed(2)}]<br>
+        <b>Rango estimado:</b> [${yMin.toFixed(2)}, ${yMax.toFixed(2)}]
+      `;
+
+      chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: xValues,
+          datasets: [{
+            label: 'f(x)',
+            data: yValues,
+            borderColor: 'blue',
+            borderWidth: 2,
+            fill: false,
+            pointRadius: 0
+          }]
+        },
+        options: {
+          scales: {
+            x: { title: { display: true, text: 'x' } },
+            y: { title: { display: true, text: 'f(x)' }, beginAtZero: false }
+          },
+          plugins: {
+            legend: { display: false }
+          }
+        }
+      });
+    }
+  </script>
+</body>
+</html>
